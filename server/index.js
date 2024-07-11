@@ -4,7 +4,6 @@ const url = require('url');
 const patreon = require('patreon');
 const patreonAPI = patreon.patreon;
 const patreonOAuth = patreon.oauth;
-const cors = require('cors');
 
 const CLIENT_ID = process.env.CLIENT_ID || 'KRiq_33aFb4Bltv-NydVH5KeWNTMzFS-05fesEZ-AguxO-EBuZLfmEvG-c5T1voJ';
 const CLIENT_SECRET = process.env.CLIENT_SECRET || 'Jw0mb7LxkLScY-fwlksVekR-REcjGeFh1t8pSf-d4xNKiKUOvxY6kumxAiif4xOd';
@@ -14,7 +13,6 @@ const patreonOAuthClient = patreonOAuth(CLIENT_ID, CLIENT_SECRET);
 const PORT = process.env.PORT || 3001;
 
 const app = express();
-app.use(cors());
 
 app.get("/api", (req, res) => {
   res.json({ message: "Hello from server!" });
@@ -26,7 +24,12 @@ app.get("/patreon-oauth", (req, res) => {
     patreonOAuthClient
         .getTokens(oauthGrantCode, REDIRECT_URL)
         .then(tokensResponse => {
-            res.json(tokensResponse);
+            const patreonAPIClient = patreonAPI(tokensResponse.access_token);
+            return patreonAPIClient('/current_user');
+        })
+        .then(result => {
+            const store = result.store;
+            res.json(store.findAll('user').map(user => user.serialize()));
         })
         .catch(err => {
             console.error('error!', err);
