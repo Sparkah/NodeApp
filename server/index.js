@@ -1,4 +1,6 @@
 require('dotenv').config();
+import { patreon as patreonAPI } from 'patreon'
+
 const express = require("express");
 const url = require('url');
 const patreon = require('patreon');
@@ -20,30 +22,36 @@ app.get("/api", (req, res) => {
   console.log('api');
 });
 
-app.get("/patreon-oauth", (req, res) => {
-    const oauthGrantCode = url.parse(req.url, true).query.code;
+app.get("/patreon-oauth", async (req, res) => {
+    try {
+        const oauthGrantCode = url.parse(req.url, true).query.code;
+        if (!oauthGrantCode) {
+            return res.status(400).send('Missing OAuth grant code');
+        }
 
-    console.log(oauthGrantCode);
-    patreonOAuthClient
-        .getTokens(oauthGrantCode, REDIRECT_URL)
-        .then(tokensResponse => {
-            accessToken = tokensResponse.access_token; // Store the access token
-            const patreonAPIClient = patreonAPI(accessToken);
-            return patreonAPIClient('/current_user');
-        })
-        .then(result => {
-          console.log("2");
-            const store = result.store;
-            res.json(store.findAll('user').map(user => user.serialize()));
-        })
-        .catch(err => {
-            console.error('error!', err);
-            res.status(500).send(err);
-        });
+        console.log('OAuth Grant Code:', oauthGrantCode);
+        console.log('Client ID:', CLIENT_ID);
+        console.log('Client Secret:', CLIENT_SECRET);
+        console.log('Redirect URL:', REDIRECT_URL);
+
+        const tokensResponse = await patreonOAuthClient.getTokens(oauthGrantCode, REDIRECT_URL);
+        console.log('Tokens Response:', tokensResponse);
+
+        accessToken = tokensResponse.access_token; // Store the access token
+        const patreonAPIClient = patreonAPI(accessToken);
+        const result = await patreonAPIClient('/current_user');
+        
+        const store = result.store;
+        res.json(store.findAll('user').map(user => user.serialize()));
+    } catch (err) {
+        console.error('Error:', err.response ? err.response.data : err.message);
+        res.status(500).send('Internal Server Error');
+    }
 });
 
+
 app.get("/get-access-token", (req, res) => {
-  console.log("1");
+    console.log("Checking access token");
     if (accessToken) {
         res.json({ accessToken });
     } else {
