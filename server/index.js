@@ -30,6 +30,8 @@ app.get("/patreon-oauth", (req, res) => {
         .then(result => {
             const store = result.store;
             res.json(store.findAll('user').map(user => user.serialize()));
+            console.log(result);
+            console.log(res);
         })
         .catch(err => {
             console.error('error!', err);
