@@ -22,8 +22,14 @@ app.get("/api", (req, res) => {
 
 app.get("/patreon-oauth", (req, res) => {
     const oauthGrantCode = url.parse(req.url, true).query.code;
+    
+    if (!oauthGrantCode) {
+        console.error('No oauthGrantCode found in request');
+        return res.status(400).send('No oauthGrantCode found in request');
+    }
 
-    console.log(oauthGrantCode);
+    console.log(`OAuth Grant Code: ${oauthGrantCode}`);
+    
     patreonOAuthClient
         .getTokens(oauthGrantCode, REDIRECT_URL)
         .then(tokensResponse => {
@@ -32,12 +38,11 @@ app.get("/patreon-oauth", (req, res) => {
             return patreonAPIClient('/current_user');
         })
         .then(result => {
-          console.log("2");
             const store = result.store;
             res.json(store.findAll('user').map(user => user.serialize()));
         })
         .catch(err => {
-            console.error('error!', err);
+            console.error('Error!', err);
             res.status(500).send(err);
         });
 });
