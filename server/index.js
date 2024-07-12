@@ -5,38 +5,50 @@ const patreon = require('patreon');
 const patreonAPI = patreon.patreon;
 const patreonOAuth = patreon.oauth;
 
-const CLIENT_ID = process.env.CLIENT_ID || 'KRiq_33aFb4Bltv-NydVH5KeWNTMzFS-05fesEZ-AguxO-EBuZLfmEvG-c5T1voJ';
-const CLIENT_SECRET = process.env.CLIENT_SECRET || 'Jw0mb7LxkLScY-fwlksVekR-REcjGeFh1t8pSf-d4xNKiKUOvxY6kumxAiif4xOd';
-const REDIRECT_URL = process.env.REDIRECT_URL || 'https://apiegames.com/patreon-api';
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
+const REDIRECT_URL = process.env.REDIRECT_URL;
 
 const patreonOAuthClient = patreonOAuth(CLIENT_ID, CLIENT_SECRET);
 const PORT = process.env.PORT || 3001;
 
 const app = express();
+let accessToken = '';
 
 app.get("/api", (req, res) => {
   res.json({ message: "Hello from server!" });
+  console.log('api');
 });
 
 app.get("/patreon-oauth", (req, res) => {
     const oauthGrantCode = url.parse(req.url, true).query.code;
 
+    console.log(oauthGrantCode);
     patreonOAuthClient
         .getTokens(oauthGrantCode, REDIRECT_URL)
         .then(tokensResponse => {
-            const patreonAPIClient = patreonAPI(tokensResponse.access_token);
+            accessToken = tokensResponse.access_token; // Store the access token
+            const patreonAPIClient = patreonAPI(accessToken);
             return patreonAPIClient('/current_user');
         })
         .then(result => {
+          console.log("2");
             const store = result.store;
             res.json(store.findAll('user').map(user => user.serialize()));
-            console.log(result);
-            console.log(res);
         })
         .catch(err => {
             console.error('error!', err);
             res.status(500).send(err);
         });
+});
+
+app.get("/get-access-token", (req, res) => {
+  console.log("1");
+    if (accessToken) {
+        res.json({ accessToken });
+    } else {
+        res.status(404).send('No access token found');
+    }
 });
 
 app.listen(PORT, () => {
